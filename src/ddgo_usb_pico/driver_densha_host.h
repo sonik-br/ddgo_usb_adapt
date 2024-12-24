@@ -14,7 +14,10 @@
  extern "C" {
 #endif
 
-//#define CFG_TUH_DENSHA 1
+#ifndef CFG_TUH_DENSHA
+#define CFG_TUH_DENSHA 1
+#endif
+
 #include "host/usbh_pvt.h"
 
 //--------------------------------------------------------------------+
@@ -104,7 +107,7 @@ bool tuh_densha_set_lamp(uint8_t dev_addr, uint8_t instance, bool state);
 //--------------------------------------------------------------------+
 // Internal Class Driver API
 //--------------------------------------------------------------------+
-void denshah_init       (void);
+bool denshah_init       (void);
 bool denshah_open       (uint8_t rhport, uint8_t dev_addr, tusb_desc_interface_t const *desc_itf, uint16_t max_len);
 bool denshah_set_config (uint8_t dev_addr, uint8_t itf_num);
 bool denshah_xfer_cb    (uint8_t dev_addr, uint8_t ep_addr, xfer_result_t result, uint32_t xferred_bytes);

@@ -1,6 +1,6 @@
 #include "tusb_option.h"
 
-#if (TUSB_OPT_HOST_ENABLED && CFG_TUH_DENSHA)
+#if (TUSB_OPT_HOST_ENABLED)
 
 #include "host/usbh.h"
 //#include "host/usbh_classdriver.h"
@@ -116,9 +116,10 @@ bool tuh_densha_send_report(uint8_t dev_addr, uint8_t instance, densha_function_
 //--------------------------------------------------------------------+
 // USBH API
 //--------------------------------------------------------------------+
-void denshah_init(void)
+bool denshah_init(void)
 {
     tu_memclr(_denshah_dev, sizeof(_denshah_dev));
+    return true;
 }
 
 bool denshah_open(uint8_t rhport, uint8_t dev_addr, tusb_desc_interface_t const *desc_itf, uint16_t max_len)
