@@ -22,18 +22,33 @@
 
 // pio-usb is required for rp2040 host
 #include "pio_usb.h"
-#define HOST_PIN_DP   3 //2   // Pin used as D+ for host, D- = D+ + 1
+#define HOST_PIN_DP   0 // Pin used as D+ for host, D- = D+ + 1
+
+#define PSX_ACK 2 // 1k pullup resistor
+#define PSX_CMD 3
+#define PSX_DAT 4 // 1k pullup resistor
+#define PSX_ATT 5
+#define PSX_CLK 6
 
 #include "Adafruit_TinyUSB.h"
 //#include "pico/stdlib.h"
 #include "driver_densha_host.h"
 #include "usb_descriptors.h"
 #include "reports.h"
+#include "src/PsxNewLib/PsxNewLib.h"
 
 #include "usb_host.h"
 
 // USB Host object
 Adafruit_USBH_Host USBHost;
+
+PsxDriverHwSpiWithAck<PSX_ATT, PSX_ACK, PSX_CMD, PSX_DAT, PSX_CLK> psxDriver;
+PsxSingleController psx;
+
+enum InputType {
+  INPUT_USB,
+  INPUT_PS1
+};
 
 enum OutputType {
   OUTPUT_PC_GENERIC,        //                                                     NOT READY
@@ -50,8 +65,22 @@ enum OutputType {
 // Implement the full required Nintendo Switch descriptor
 // Change Hori to Zuki 0x33DD 0x0002 "One Handle MasCon for Nintendo Switch Exclusive Edition" ZKNS-002
 
+
+// Configuration
+InputType inputType = INPUT_USB;
 OutputType outputType = OUTPUT_PC_TWO_HANDLE;
 bool outputClassicPS1 = true; //Forces UP and DOWN as pressed when in Classic mode.
+
+// Validation
+// TinyUSB is required
+#ifndef USE_TINYUSB
+  #error USB Stack must be configured to use Adafruit TinyUSB
+#endif
+#if F_CPU != 120000000 && F_CPU != 240000000
+  #error PIO USB require CPU Speed must be 120 or 240 MHz
+#endif
+
+
 
 //Classic controller definitions
 #define C_A       0x0001 //SQUARE
@@ -213,16 +242,9 @@ void setup()
   printf("TinyUSB Densha De Go adapter\r\n");
 
 
-  // USB Host via PIO
+if (inputType == INPUT_USB) {
 
-  // Check for CPU frequency, must be multiple of 120Mhz for bit-banging USB
-  uint32_t cpu_hz = clock_get_hz(clk_sys);
-  if ( cpu_hz != 120000000UL && cpu_hz != 240000000UL ) {
-    while ( !Serial ) delay(10);   // wait for native usb
-    Serial.printf("Error: CPU Clock = %u, PIO USB require CPU clock must be multiple of 120 Mhz\r\n", cpu_hz);
-    Serial.printf("Change your CPU Clock to either 120 or 240 Mhz in Menu->CPU Speed \r\n", cpu_hz);
-    while(1) delay(1);
-  }
+  // USB Host via PIO
 
   pio_usb_configuration_t pio_cfg = PIO_USB_DEFAULT_CONFIG;
   pio_cfg.pin_dp = HOST_PIN_DP;
@@ -240,16 +262,108 @@ void setup()
   USBHost.configure_pio_usb(1, &pio_cfg);
 
   // run host stack on controller (rhport) 1
-  // Note: For rp2040 pico-pio-usb, calling USBHost.begin() on core1 will have most of the
-  // host bit-banging processing works done in core1 to free up core0 for other works
   USBHost.begin(1);
+
+} else if (inputType == INPUT_PS1) {
+  if (!psxDriver.begin ()) {
+    panic("Cannot initialize psx driver");
+  }
+}
+
 }
 
 void loop() {
   static generic_report_t last_report { 0x00 };
-
+if(inputType == INPUT_USB) {
   // TinyUSBDevice.task(); // no need to call here. Arduino Core handles this
   USBHost.task();
+} else if (inputType == INPUT_PS1) {
+  static bool haveController = false;
+  static uint32_t lastPool = 0;
+
+
+  //should pool now?
+  if (millis() - lastPool >= 1) {
+    lastPool = millis();
+  
+    if (!haveController) {
+      if (psx.begin (psxDriver)) { // controller just connected
+        haveController = true;
+      }
+    } else {
+      if (!psx.read ()) { // controller just disconnected
+        haveController = false;
+      } else {
+        //it's a ddgo controller?
+        if (psx.buttonPressed(PSB_PAD_UP) && psx.buttonPressed(PSB_PAD_DOWN)) {
+        
+          generic_input_report.brake            = 0x00;
+          generic_input_report.power            = 0x00;
+          generic_input_report.hat              = 0x08;
+          generic_input_report.buttons.bButtons = 0x00;
+    
+          generic_input_report.buttons.a = psx.buttonPressed(PSB_SQUARE);
+          generic_input_report.buttons.b = psx.buttonPressed(PSB_CROSS);
+          generic_input_report.buttons.c = psx.buttonPressed(PSB_CIRCLE);
+          generic_input_report.buttons.select = psx.buttonPressed(PSB_SELECT);
+          generic_input_report.buttons.start = psx.buttonPressed(PSB_START);
+          
+          //power
+          if (                                        psx.buttonPressed(PSB_PAD_LEFT) && psx.buttonPressed(PSB_PAD_RIGHT)) // N
+            generic_input_report.power = 0x81;
+          else if (psx.buttonPressed(PSB_TRIANGLE)                                    && psx.buttonPressed(PSB_PAD_RIGHT)) // P1
+            generic_input_report.power = 0x6D;
+          else if (                                                                      psx.buttonPressed(PSB_PAD_RIGHT)) // P2
+            generic_input_report.power = 0x54;
+          else if (psx.buttonPressed(PSB_TRIANGLE) && psx.buttonPressed(PSB_PAD_LEFT)                                    ) // P3
+            generic_input_report.power = 0x3F;
+          else if (                                   psx.buttonPressed(PSB_PAD_LEFT)                                    ) // P4
+            generic_input_report.power = 0x21;
+          else if (psx.buttonPressed(PSB_TRIANGLE)                                                                       ) // P5
+            generic_input_report.power = 0x00;
+          else                                                                                                             // Transition
+            generic_input_report.power = 0xFF;
+
+          //brake
+          if (     psx.buttonPressed(PSB_L1) && psx.buttonPressed(PSB_L2) && psx.buttonPressed(PSB_R1) && psx.buttonPressed(PSB_R2)) // Transition
+            generic_input_report.brake = 0xFF;
+          else if (                             psx.buttonPressed(PSB_L2) && psx.buttonPressed(PSB_R1) && psx.buttonPressed(PSB_R2)) // Released
+            generic_input_report.brake = 0x79;
+          else if (psx.buttonPressed(PSB_L1)                              && psx.buttonPressed(PSB_R1) && psx.buttonPressed(PSB_R2)) // B1
+            generic_input_report.brake = 0x8A;
+          else if (                                                          psx.buttonPressed(PSB_R1) && psx.buttonPressed(PSB_R2)) // B2
+            generic_input_report.brake = 0x94;
+          else if (psx.buttonPressed(PSB_L1) && psx.buttonPressed(PSB_L2)                              && psx.buttonPressed(PSB_R2)) // B3
+            generic_input_report.brake = 0x9A;
+          else if (                             psx.buttonPressed(PSB_L2)                              && psx.buttonPressed(PSB_R2)) // B4
+            generic_input_report.brake = 0xA2;
+          else if (psx.buttonPressed(PSB_L1)                                                           && psx.buttonPressed(PSB_R2)) // B5
+            generic_input_report.brake = 0xA8;
+          else if (                                                                                       psx.buttonPressed(PSB_R2)) // B6
+            generic_input_report.brake = 0xAF;
+          else if (psx.buttonPressed(PSB_L1) && psx.buttonPressed(PSB_L2) && psx.buttonPressed(PSB_R1)                             ) // B7
+            generic_input_report.brake = 0xB2;
+          else if (                             psx.buttonPressed(PSB_L2) && psx.buttonPressed(PSB_R1)                             ) // B8
+            generic_input_report.brake = 0xB5;
+          else if (psx.buttonPressed(PSB_L1)                              && psx.buttonPressed(PSB_R1)                             ) // Unmarked 1
+            generic_input_report.brake = 0xB5; //repeat as B8
+          else if (                                                          psx.buttonPressed(PSB_R1)                             ) // Unmarked 2
+            generic_input_report.brake = 0xB5; //repeat as B8
+          else if (psx.buttonPressed(PSB_L1) && psx.buttonPressed(PSB_L2)                                                          ) // Unmarked 3
+            generic_input_report.brake = 0xB5; //repeat as B8
+          else if (                             psx.buttonPressed(PSB_L2)                                                          ) // Unmarked 4
+            generic_input_report.brake = 0xB5; //repeat as B8
+          else if (psx.buttonPressed(PSB_L1)                                                                                       ) // Unmarked 5
+            generic_input_report.brake = 0xB5; //repeat as B8
+          else                                                                                                                       // Emergency
+            generic_input_report.brake = 0xB9;
+
+        }//end ddgo controller
+  
+      }
+    }
+  }//end pooling
+}
 
 //  if (Serial.available()) {
 //    const char ch = Serial.read();
