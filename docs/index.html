@@ -1,0 +1,1328 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<!--
+
+Densha De Go USB adapter
+by Matheus Fraguas (sonik-br)
+https://github.com/sonik-br/ddgo_usb_adapt
+
+PS4 auth code based on GP2040-CE project
+https://github.com/OpenStickCommunity/GP2040-CE/
+
+-->
+
+<head>
+    <meta charset="UTF-8">
+    <title>DDGO</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsencrypt@latest/bin/jsencrypt.min.js"></script>
+    <style>
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .tab-button {
+            padding: 10px 20px;
+            background: #eee;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        
+        .tab-button.active {
+            background: #007bff;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        
+
+
+        .custom-button {
+            padding: 5px 10px;
+            background: #357a38;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .custom-button2 {
+            padding: 5px 10px;
+            background: #aa2e25;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        
+        
+        
+        
+        
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+        
+        .wrapper {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .content {
+            flex: 1;
+            padding: 10px 20px;
+        }
+        
+        footer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+        	height: 70px;
+        }
+        
+        .footer-text {
+            flex: 1;
+            text-align: center;
+        }
+        
+        
+        
+        body { font-family: sans-serif; background: white; color: black; text-align: center; }
+        
+        .gamepad { display: grid; grid-template-areas:
+        	"power buttons"
+        	"brake buttons2";
+            gap: 20px; justify-content: center; margin-top: 40px;
+        }
+        
+        .section { border: 2px solid #444; padding: 10px; border-radius: 10px; background: #222; color:white }
+        .power button, .brake button, .dpad button, .buttons button {
+            width: 40px; height: 40px; margin: 5px;
+            background: #333; color: #eee; border: none; border-radius: 5px;
+        }
+        
+        .dpad { display: grid; grid-template-areas:
+            ". dpad_u ."
+            "dpad_l . dpad_r"
+            ". dpad_d .";
+        }
+        
+        .power1 { display: grid; grid-template-areas:
+            "pn pt"
+            "p1 ."
+            "p2 ."
+        	"p3 ."
+        	"p4 ."
+        	"p5 .";
+        }
+        .power { display: grid; grid-template-areas:
+            "pn p1 p2 p3 p4 p5"
+            "pt .   .  .  .  .";
+        }
+        
+        .brake1 { display: grid; grid-template-areas:
+            "br bt"
+            "b1 bu1"
+            "b2 bu2"
+        	"b3 bu3"
+        	"b4 bu4"
+        	"b5 bu5"
+        	"b6 ."
+        	"b7 ."
+        	"b8 ."
+        	"be ."
+        }
+        .brake { display: grid; grid-template-areas:
+        	"br b1 b2 b3 b4 b5 b6 b7 b8 be"
+        	"bt bu1 bu2 bu3 bu4 bu5 . . . .";
+        }
+        
+        /* table */
+        
+        .zebra {
+          border-collapse: collapse;         /* clean borders */
+          width: 100%;
+          font-family: system-ui, sans-serif;
+          text-align: left;
+        }
+        
+        /* cells */
+        .zebra th,
+        .zebra td {
+          padding: 0.5rem 0.75rem;
+          border: 1px solid #e6e6e6;
+          /*color:green;*/
+        }
+        
+        /* alternating rows */
+        .zebra tbody tr:nth-child(odd) {
+          background: #ffffff;               /* odd rows */
+        }
+        .zebra tbody tr:nth-child(even) {
+          background: #f8f9fa;               /* even rows (striped) */
+        }
+        
+        /* subtle hover */
+        .zebra tbody tr:hover {
+          background: #eef2f7;
+        }
+        
+        /* keep header visually distinct */
+        .zebra thead th {
+          background: #f1f3f5;
+          font-weight: 600;
+        }
+        
+        
+        /* checkbox */
+        /* reset any focus styles on the state spans */
+        .toggle .state {
+          outline: none;
+          box-shadow: none;
+          border: none;
+        }
+        
+        /* ensure spans are not keyboard-focusable */
+        .toggle .state { pointer-events: auto; }
+        
+        /* keep accessible focus visible on the checkbox only */
+        .toggle-input:focus-visible {
+          outline: 2px solid #2563eb;    /* visible keyboard focus */
+          outline-offset: 3px;
+          border-radius: 3px;
+        }
+        
+        /* optional light effect for all focus (mouse+keyboard) */
+        .toggle-input:focus {
+          box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+        }
+        
+        /* show/hide state text as before */
+        .toggle .state-on { display: none; }
+        .toggle .state-off { display: inline; }
+        .toggle-input:checked + .state-off { display: none; }
+        .toggle-input:checked + .state-off + .state-on { display: inline; }
+    </style>
+</head>
+
+<body>
+
+    <div class="wrapper">
+        <div class="content">
+
+            <h2>Densha De Go USB adapter - Web Config</h2>
+
+            <button class="custom-button" id="connect">Connect</button>
+
+            <div id="connected_device" style="display:none;">
+                <button class="custom-button2" id="disconnect">Disconnect</button>
+                <button class="custom-button2" id="send_bootsel">Bootloader mode</button>
+                <br/>
+
+                <div class="tabs">
+                    <button class="tab-button active" data-tab="tab1">Debug Info</button>
+                    <button class="tab-button" data-tab="tab2">Config</button>
+                    <button class="tab-button" data-tab="tab3">Keys</button>
+                </div>
+
+                <div id="tab1" class="tab-content active">
+                    <div>Project home page: <a href="https://github.com/sonik-br/ddgo_usb_adapt">ddgo_usb_adapt</a></div>
+
+                    <div id="device_info"></div>
+
+                    <div id="gamepad" class="gamepad">
+                        <div class="section" style="grid-area: power">
+                            <h3>Power Handle</h3>
+                            <div class="power">
+                                <button data-power="INT_PN" style="grid-area: pn" title="Neutral">N</button>
+                                <button data-power="INT_P1" style="grid-area: p1" title="1">1</button>
+                                <button data-power="INT_P2" style="grid-area: p2" title="2">2</button>
+                                <button data-power="INT_P3" style="grid-area: p3" title="3">3</button>
+                                <button data-power="INT_P4" style="grid-area: p4" title="4">4</button>
+                                <button data-power="INT_P5" style="grid-area: p5" title="5">5</button>
+                                <button data-power="INT_PT" style="grid-area: pt" title="Transition">Tran.</button>
+                            </div>
+                        </div>
+
+                        <div class="section" style="grid-area: brake">
+                            <h3>Brake Handle</h3>
+                            <div class="brake">
+                                <button data-brake="INT_BR" style="grid-area: br" title="Released">Rel.</button>
+                                <button data-brake="INT_B1" style="grid-area: b1" title="1">1</button>
+                                <button data-brake="INT_B2" style="grid-area: b2" title="2">2</button>
+                                <button data-brake="INT_B3" style="grid-area: b3" title="3">3</button>
+                                <button data-brake="INT_B4" style="grid-area: b4" title="4">4</button>
+                                <button data-brake="INT_B5" style="grid-area: b5" title="5">5</button>
+                                <button data-brake="INT_B6" style="grid-area: b6" title="6">6</button>
+                                <button data-brake="INT_B7" style="grid-area: b7" title="7">7</button>
+                                <button data-brake="INT_B8" style="grid-area: b8" title="8">8</button>
+                                <button data-brake="INT_BU1" style="grid-area: bu1" title="Unused 1">U 1</button>
+                                <button data-brake="INT_BU2" style="grid-area: bu2" title="Unused 2">U 2</button>
+                                <button data-brake="INT_BU3" style="grid-area: bu3" title="Unused 3">U 3</button>
+                                <button data-brake="INT_BU4" style="grid-area: bu4" title="Unused 4">U 4</button>
+                                <button data-brake="INT_BU5" style="grid-area: bu5" title="Unused 5">U 5</button>
+                                <button data-brake="INT_BE" style="grid-area: be" title="Emergency">E</button>
+                                <button data-brake="INT_BT" style="grid-area: bt" title="Transition">Tran.</button>
+                            </div>
+                        </div>
+
+                        <div class="section buttons" style="grid-area: buttons">
+                            <h3>Main Buttons</h3>
+                            <button data-btn="PAD_U">↑</button>
+                            <button data-btn="PAD_D">↓</button>
+                            <button data-btn="PAD_L">←</button>
+                            <button data-btn="PAD_R">→</button>
+                            <button data-btn="A" title="A">A</button>
+                            <button data-btn="B" title="B">B</button>
+                            <button data-btn="C" title="C">C</button>
+                            <button data-btn="D" title="D">D</button>
+                            <button data-btn="START">Start</button>
+                            <button data-btn="SELECT">Select</button>
+                        </div>
+
+                        <div class="section buttons" style="grid-area: buttons2">
+                            <h3>Ext Buttons</h3>
+                            <button data-btn="PAD_U_EXT">↑</button>
+                            <button data-btn="PAD_D_EXT">↓</button>
+                            <button data-btn="PAD_L_EXT">←</button>
+                            <button data-btn="PAD_R_EXT">→</button>
+                            <button data-btn="PEDAL">Pedal</button>
+                            <button data-btn="HOME">Hom.</button>
+                            <button data-btn="CAPTURE">Capt.</button>
+                            <button data-btn="D_EXT">D
+                                <br/>(ext)</button>
+                            <button data-btn="HOME_EXT">Home
+                                <br/>(ext)</button>
+                            <button data-btn="CAPTURE_EXT">Capt.
+                                <br/>(ext)</button>
+                        </div>
+                    </div>
+
+                </div>
+                <div id="tab2" class="tab-content">
+
+                    <table class="zebra">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Current</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Input Mode</td>
+                                <td>
+                                    <select id="config_inputmode"></select>
+                                </td>
+                                <td>Input into the adapter.
+                                    <br/> If using USB, make sure to Enable USB Host.
+                                    <br/> Default is <span id="default_inputmode">-</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>Output Mode</td>
+                                <td>
+                                    <select id="config_outputmode"></select>
+                                </td>
+                                <td>Output from the adapter.
+                                    <br/>Default is <span id="default_outputmode">-</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>Enable USB Host</td>
+                                <td>
+                                    <label class="toggle">
+                                        <input type="checkbox" class="toggle-input" id="config_enable_usb_host" />
+                                        <span class="state state-off" aria-live="polite">Disabled</span>
+                                        <span class="state state-on" aria-hidden="true">Enabled</span>
+                                    </label>
+                                </td>
+                                <td>
+                                    Enable use of USB Host port.
+                                    <br/> Can be used for Controller Input and/or PS4 Auth Passthrough.
+                                    <br/>Default is <span id="default_enable_usb_host">-</span>.
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>Use PS4 Keys</td>
+                                <td>
+                                    <label class="toggle">
+                                        <input type="checkbox" class="toggle-input" id="config_enable_ps4key" />
+                                        <span class="state state-off" aria-live="polite">Disabled</span>
+                                        <span class="state state-on" aria-hidden="true">Enabled</span>
+                                    </label>
+                                </td>
+                                <td>
+                                    Use uploaded key files extracted from a DualShock 4 controller.
+                                    <br/> Used when in OUTPUT_PS4 mode.
+                                    <br/> Enable to use the uploaded files.
+                                    <br/> Disable to use USB Passthrough (requires a USB Host input port).
+                                    <br/> Default is <span id="default_enable_ps4key">-</span>.
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>Classic PS1</td>
+                                <td>
+                                    <label class="toggle">
+                                        <input type="checkbox" class="toggle-input" id="config_output_classic_ps1" />
+                                        <span class="state state-off" aria-live="polite">Disabled</span>
+                                        <span class="state state-on" aria-hidden="true">Enabled</span>
+                                    </label>
+                                </td>
+                                <td>
+                                    Forces UP and DOWN as pressed. <b>This feature is not implemented yet...</b>
+                                    <br/> Used when in HID_CLASSIC mode.
+                                    <br/> Useful for emulators.
+                                    <br/> Default is <span id="default_output_classic_ps1">-</span>.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>LED pin</td>
+                                <td><input type="number" id="config_led_pin" min="-1" max="25" />
+                                </td>
+                                <td>
+                                    Board LED pin
+                                    <br/> To disable, set to -1.
+                                    <br/>Default is <span id="default_led_pin">-</span>.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>USB D+ pin</td>
+                                <td><input type="number" id="config_usb_dp_pin" min="-1" max="22" />
+                                </td>
+                                <td>
+                                    USB HOST D+ pin
+                                    <br/> To disable, set to -1.
+                                    <br/>Default is <span id="default_usb_dp_pin">-</span>.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <br/>
+                    <button class="custom-button" id="save_config">Save and restart</button>
+                    <br/>
+
+                </div>
+                <div id="tab3" class="tab-content">
+
+                    <table>
+                        <tr>
+                            <td>
+                                <label for="file1">Private Key:</label>
+                                <br/>
+                                <input type="file" id="file1">
+                            </td>
+                            <td>
+                                <label for="file2">Serial:</label>
+                                <br/>
+                                <input type="file" id="file2">
+                            </td>
+                            <td>
+                                <label for="file3">Signature:</label>
+                                <br/>
+                                <input type="file" id="file3">
+                            </td>
+                        </tr>
+
+                    </table>
+
+                    <br/>
+                    <button class="custom-button" id="send">Upload</button>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+        <footer>
+            <div class="footer-text">
+                by Matheus Fraguas (sonik-br) &nbsp;
+                <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%23009739%22/%3E%3Cpolygon%20points%3D%22200%2C50%20350%2C150%20200%2C250%2050%2C150%22%20fill%3D%22%23FFCC29%22/%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22150%22%20r%3D%2260%22%20fill%3D%22%23002776%22/%3E%3C/svg%3E"
+                alt="Brazil Flag" width="20">
+                <br/>
+                <br/>
+                <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
+                <script type='text/javascript'>
+                    kofiwidget2.init('Support me on Ko-fi', '#72a4f2', 'B0B0LV8LC');kofiwidget2.draw();
+                </script>
+            </div>
+
+        </footer>
+    </div>
+
+</body>
+
+
+<script>
+//tabs
+const buttons = document.querySelectorAll('.tab-button');
+const contents = document.querySelectorAll('.tab-content');
+
+buttons.forEach(button => {
+    button.addEventListener('click', () => {
+        // Remove active class from all buttons and contents
+        buttons.forEach(btn => btn.classList.remove('active'));
+        contents.forEach(content => content.classList.remove('active'));
+        // Add active class to clicked button and corresponding content
+        button.classList.add('active');
+        document.getElementById(button.dataset.tab).classList.add('active');
+    });
+});
+
+
+
+//hid commands
+const cmd_auth_init = 0;
+const cmd_auth_serial = 1;
+const cmd_auth_signature = 2;
+const cmd_auth_rsaN = 3;
+const cmd_auth_rsaE = 4;
+const cmd_auth_rsaP = 5;
+const cmd_auth_rsaQ = 6;
+const cmd_auth_save = 7;
+
+const WEB_ID_INPUT_PAD = 1;
+const WEB_ID_GET_FIRMWARE_INFO = 2;
+const WEB_ID_SET_BOOTSEL = 3;
+const WEB_ID_GET_INPUTMODE_MASK = 4;
+const WEB_ID_GET_SET_KEYS = 5;
+const WEB_ID_GET_DEFAULT_SET_APPLY = 6;
+const WEB_ID_GET_CURRENT_SET_SAVE = 7;
+
+const Config_Data_Input_Mode = Object.freeze({
+    USB: 0,
+    PS1: 1
+});
+
+const Config_Data_Output_Mode = Object.freeze({
+    //OUTPUT_HID_CLASSIC: 0,       // Classic controller map (layout of PS1 digital pad)  NOT READY
+    PC_ONE_HANDLE: 1, // OUTPUT_PC_ONE_HANDLE One handle controller (PC) DGC-255
+    PC_TWO_HANDLE: 2, // OUTPUT_PC_TWO_HANDLE Two handle controller (PC) DGOC-44U
+    //OUTPUT_PC_RYOJOUHEN: 3,      // Ryojōhen controller (PC) DYC-288 / DRC-184          NOT READY
+    SWITCH_ONE_HANDLE: 4, // OUTPUT_SWITCH_ONE_HANDLE One handle controller (Switch) ZKNS-001
+    PS4: 5, // OUTPUT_PS4 PS4 console requires authentication
+    PS2_TWO_HANDLE: 6, // OUTPUT_PS2_TWO_HANDLE Two handle controller "Type 2" (PS2) TCPP-20009 / TCPP-20012
+    PS2_SHINKANSEN: 7, // OUTPUT_PS2_SHINKANSEN Shinkansen controller (PS2) TCPP-20011
+    //OUTPUT_WEBCONFIG: 8,
+});
+
+const Config_Data_Type = Object.freeze({
+    COMMON: 0,
+    BOOL: 1,
+    MULTIPLE: 2
+});
+
+const select = document.getElementById('config_inputmode');
+for (const [key, value] of Object.entries(Config_Data_Input_Mode)) {
+    // new Option(text, value, defaultSelected?, selected?)
+    const opt = new Option(key, value, false, false);
+    select.add(opt);
+}
+
+const select2 = document.getElementById('config_outputmode');
+for (const [key, value] of Object.entries(Config_Data_Output_Mode)) {
+    const opt = new Option(key, value, false, false);
+    select2.add(opt);
+}
+
+//id is used as byte-index
+const config_data = [
+    { id: 1, default: 0, initial: 0, current: 0, data_type: Config_Data_Type.MULTIPLE, enumRef: Config_Data_Input_Mode,  name: 'inputmode',        el_config: document.getElementById('config_inputmode'),          el_default: document.getElementById('default_inputmode') },
+    { id: 2, default: 0, initial: 0, current: 0, data_type: Config_Data_Type.MULTIPLE, enumRef: Config_Data_Output_Mode, name: 'outputmode',       el_config: document.getElementById('config_outputmode'),         el_default: document.getElementById('default_outputmode') },
+    { id: 3, default: 0, initial: 0, current: 0, data_type: Config_Data_Type.BOOL,     enumRef: null,					 name: 'enableUsbHost',    el_config: document.getElementById('config_enable_usb_host'),    el_default: document.getElementById('default_enable_usb_host') },
+    { id: 4, default: 0, initial: 0, current: 0, data_type: Config_Data_Type.BOOL,     enumRef: null,					 name: 'enable_ps4key',    el_config: document.getElementById('config_enable_ps4key'),      el_default: document.getElementById('default_enable_ps4key') },
+    { id: 5, default: 0, initial: 0, current: 0, data_type: Config_Data_Type.BOOL,     enumRef: null,					 name: 'outputClassicPS1', el_config: document.getElementById('config_output_classic_ps1'), el_default: document.getElementById('default_output_classic_ps1') },
+    { id: 6, default: 0, initial: 0, current: 0, data_type: Config_Data_Type.COMMON,   enumRef: null,					 name: 'ledPin',           el_config: document.getElementById('config_led_pin'),            el_default: document.getElementById('default_led_pin') },
+    { id: 7, default: 0, initial: 0, current: 0, data_type: Config_Data_Type.COMMON,   enumRef: null,					 name: 'usbDpPin',         el_config: document.getElementById('config_usb_dp_pin'),         el_default: document.getElementById('default_usb_dp_pin') },
+];
+
+//hid device
+let device;
+
+//auth data
+var SerialBytes = new Uint8Array(16);
+var SignatureBytes = new Uint8Array(256);
+var NBytes = new Uint8Array(256);
+var EBytes = new Uint8Array(4);
+var PBytes = new Uint8Array(128);
+var QBytes = new Uint8Array(128);
+
+const SHA256 = (ascii) => {
+    function rightRotate(value, amount) {
+        return (value >>> amount) | (value << (32 - amount));
+    }
+        
+    const mathPow = Math.pow;
+    const maxWord = mathPow(2, 32);
+    const lengthProperty = 'length';
+    let i; // Used as a counter across the whole file
+    let j; // Used as a counter across the whole file
+    var result = '';
+        
+    const words = [];
+    const asciiBitLength = ascii[lengthProperty] * 8;
+        
+    //* caching results is optional - remove/add slash from front of this line to toggle
+    // Initial hash value: first 32 bits of the fractional parts of the square roots of the first 8 primes
+    // (we actually calculate the first 64, but extra values are just ignored)
+    var hash = (SHA256.h = SHA256.h || []);
+    // Round constants: first 32 bits of the fractional parts of the cube roots of the first 64 primes
+    const k = (SHA256.k = SHA256.k || []);
+    let primeCounter = k[lengthProperty];
+    /*/
+        var hash = [], k = [];
+        var primeCounter = 0;
+        //*/
+        
+    const isComposite = {};
+    for (let candidate = 2; primeCounter < 64; candidate++) {
+        if (!isComposite[candidate]) {
+        	for (i = 0; i < 313; i += candidate) {
+        		isComposite[i] = candidate;
+        	}
+        	hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+        	k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+        }
+    }
+        
+    ascii += '\x80'; // Append Ƈ' bit (plus zero padding)
+    while ((ascii[lengthProperty] % 64) - 56) ascii += '\x00'; // More zero padding
+    for (i = 0; i < ascii[lengthProperty]; i++) {
+        j = ascii.charCodeAt(i);
+        if (j >> 8) return; // ASCII check: only accept characters in range 0-255
+        words[i >> 2] |= j << (((3 - i) % 4) * 8);
+    }
+    words[words[lengthProperty]] = (asciiBitLength / maxWord) | 0;
+    words[words[lengthProperty]] = asciiBitLength;
+        
+    // process each chunk
+    for (j = 0; j < words[lengthProperty]; ) {
+        const w = words.slice(j, (j += 16)); // The message is expanded into 64 words as part of the iteration
+        const oldHash = hash;
+        // This is now the undefinedworking hash", often labelled as variables a...g
+        // (we have to truncate as well, otherwise extra entries at the end accumulate
+        hash = hash.slice(0, 8);
+        
+        for (i = 0; i < 64; i++) {
+        	const i2 = i + j;
+        	// Expand the message into 64 words
+        	// Used below if
+        	const w15 = w[i - 15];
+        	const w2 = w[i - 2];
+        
+        	// Iterate
+        	const a = hash[0];
+        	const e = hash[4];
+        	const temp1 =
+        		hash[7] +
+        		(rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + // S1
+        		((e & hash[5]) ^ (~e & hash[6])) + // ch
+        		k[i] +
+        		// Expand the message schedule if needed
+        		(w[i] =
+        			i < 16
+        				? w[i]
+        				: (w[i - 16] +
+        						(rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + // s0
+        						w[i - 7] +
+        						(rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | // s1
+        					0);
+        	// This is only used once, so *could* be moved below, but it only saves 4 bytes and makes things unreadble
+        	const temp2 =
+        		(rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + // S0
+        		((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2])); // maj
+        
+        	hash = [(temp1 + temp2) | 0].concat(hash); // We don't bother trimming off the extra ones, they're harmless as long as we're truncating when we do the slice()
+        	hash[4] = (hash[4] + temp1) | 0;
+        }
+        
+        for (i = 0; i < 8; i++) {
+        	hash[i] = (hash[i] + oldHash[i]) | 0;
+        }
+    }
+        
+    for (i = 0; i < 8; i++) {
+        for (j = 3; j + 1; j--) {
+        	const b = (hash[i] >> (j * 8)) & 255;
+        	result += (b < 16 ? 0 : '') + b.toString(16);
+        }
+    }
+    return result;
+}; // end SHA256
+
+
+
+function int2mbedmpi(num) {
+    const out = [];
+    const mask = BigInt('4294967295');
+    const zero = BigInt('0');
+    while (num !== zero) {
+        out.push((num & mask).toString(16).padStart(8, '0'));
+        num = num >> BigInt(32);
+    }
+    return out;
+}
+
+function mbedmpi2b64(mpi) {
+    const arr = new Uint8Array(mpi.length * 4);
+    let cnt = 0;
+    for (let i = 0; i < mpi.length; i++) {
+        const bytes = hexToBytes(mpi[i]);
+        for (let j = 4; j > 0; j--) {
+            //arr[cnt] = bytes[j];
+            // TEST: re-order from LSB to MSB
+            arr[cnt] = bytes[j - 1];
+            cnt++;
+        }
+    }
+
+    return btoa(String.fromCharCode.apply(null, arr));
+}
+
+function hexToBytes(hex) {
+    const bytes = [];
+    for (let c = 0; c < hex.length; c += 2)
+        bytes.push(parseInt(hex.substr(c, 2), 16));
+    return bytes;
+}
+
+
+const Internal_Power_Mode = Object.freeze({
+    INT_PN: 0,
+    INT_P1: 1,
+    INT_P2: 2,
+    INT_P3: 3,
+    INT_P4: 4,
+    INT_P5: 5,
+    INT_PT: 6
+});
+
+const Internal_Brake_Mode = Object.freeze({
+    INT_BR:   0,
+    INT_B1:   1,
+    INT_B2:   2,
+    INT_B3:   3,
+    INT_B4:   4,
+    INT_B5:   5,
+    INT_B6:   6,
+    INT_B7:   7,
+    INT_B8:   8,
+    INT_BU1:  9,
+    INT_BU2: 10,
+    INT_BU3: 11,
+    INT_BU4: 12,
+    INT_BU5: 13,
+    INT_BE:  14,
+    INT_BT:  15
+});
+
+
+function parseUsboutInputReport(view) {
+    let offset = 0;
+
+    const brakeByte = view.getUint8(offset++);
+    const powerByte = view.getUint8(offset++);
+    const hatPlusByte = view.getUint8(offset++);
+    const buttonsByte = view.getUint8(offset++);
+    const buttonsExtByte = view.getUint8(offset++);
+
+    //const brake = brakeByte;
+    //const power = powerByte;
+
+    let brake = Internal_Brake_Mode.INT_BR;
+    for (const [key, value] of Object.entries(Internal_Brake_Mode)) {
+        if (value == brakeByte)
+            brake = key;
+    }
+
+    let power = Internal_Power_Mode.INT_PN;
+    for (const [key, value] of Object.entries(Internal_Power_Mode)) {
+        if (value == powerByte)
+            power = key;
+    }
+
+    const hat = hatPlusByte & 0xf;
+    const hat_ext = (hatPlusByte >> 4) % 0xf;
+    const buttons_raw = buttonsByte;
+    const buttons_ext_raw = buttonsExtByte;
+
+    const buttons = {
+        //ddgo
+        B: !!(buttons_raw & (1 << 0)),
+        A: !!(buttons_raw & (1 << 1)),
+        C: !!(buttons_raw & (1 << 2)),
+        D: !!(buttons_raw & (1 << 3)),
+        SELECT: !!(buttons_raw & (1 << 4)),
+        START: !!(buttons_raw & (1 << 5)),
+
+        PAD_U: false,
+        PAD_D: false,
+        PAD_L: false,
+        PAD_R: false,
+
+        //ext
+        PEDAL: !!(buttons_ext_raw & (1 << 0)),
+        HOME: !!(buttons_ext_raw & (1 << 1)),
+        CAPTURE: !!(buttons_ext_raw & (1 << 2)),
+        D_EXT: !!(buttons_ext_raw & (1 << 3)),
+        HOME_EXT: !!(buttons_ext_raw & (1 << 4)),
+        CAPTURE_EXT: !!(buttons_ext_raw & (1 << 5)),
+
+        PAD_U_EXT: false,
+        PAD_D_EXT: false,
+        PAD_L_EXT: false,
+        PAD_R_EXT: false,
+    };
+
+    switch (hat) {
+        case 0:
+            buttons.PAD_U = true;
+            break;
+        case 1:
+            buttons.PAD_U = true;
+            buttons.PAD_R = true;
+            break;
+        case 2:
+            buttons.PAD_R = true;
+            break;
+        case 3:
+            buttons.PAD_R = true;
+            buttons.PAD_D = true;
+            break;
+        case 4:
+            buttons.PAD_D = true;
+            break;
+        case 5:
+            buttons.PAD_D = true;
+            buttons.PAD_L = true;
+            break;
+        case 6:
+            buttons.PAD_L = true;
+            break;
+        case 7:
+            buttons.PAD_L = true;
+            buttons.PAD_U = true;
+            break;
+    }
+
+    switch (hat_ext) {
+        case 0:
+            buttons.PAD_U_EXT = true;
+            break;
+        case 1:
+            buttons.PAD_U_EXT = true;
+            buttons.PAD_R_EXT = true;
+            break;
+        case 2:
+            buttons.PAD_R_EXT = true;
+            break;
+        case 3:
+            buttons.PAD_R_EXT = true;
+            buttons.PAD_D_EXT = true;
+            break;
+        case 4:
+            buttons.PAD_D_EXT = true;
+            break;
+        case 5:
+            buttons.PAD_D_EXT = true;
+            buttons.PAD_L_EXT = true;
+            break;
+        case 6:
+            buttons.PAD_L_EXT = true;
+            break;
+        case 7:
+            buttons.PAD_L_EXT = true;
+            buttons.PAD_U_EXT = true;
+            break;
+    }
+
+
+    // Merge all union fields into top-level object
+    return {
+        brake,
+        power,
+        hat,
+        hat_ext,
+        buttons_raw,
+        buttons,
+        ...buttons, // flatten digital buttons
+        buttons_ext_raw,
+        //buttons_ext,
+        //...buttons_ext, // flatten digital buttons
+    };
+}
+
+
+
+
+function base64ToByteArray(base64) {
+    const binaryString = atob(base64); // Decode Base64 to binary string
+    const byteArray = new Uint8Array(binaryString.length);
+
+    for (let i = 0; i < binaryString.length; i++) {
+        byteArray[i] = binaryString.charCodeAt(i);
+    }
+
+    return byteArray;
+}
+
+function saveByteArrayAsFile(byteArray, fileName) {
+    const blob = new Blob([byteArray], {
+        type: 'application/octet-stream'
+    });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+async function readFileAsTextAsync(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+
+        reader.readAsText(file)
+    });
+}
+
+async function readFileAsBinaryStringAsync(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+
+        reader.readAsBinaryString(file);
+    });
+}
+
+
+async function readAllFiles() {
+    const fileInputs = [
+        document.getElementById('file1'),
+        document.getElementById('file2'),
+        document.getElementById('file3')
+    ];
+
+    const fileContents = [null, null, null];
+    let filesRead = 0;
+
+    //fileInputs.forEach((input, index) => {
+    for (const [index, input] of fileInputs.entries()) {
+        const file = input.files[0];
+        if (!file) {
+            throw new Error(`File ${index + 1} not selected.`);
+        }
+
+        if (index == 2)
+            fileContents[index] = await readFileAsBinaryStringAsync(file);
+        else
+            fileContents[index] = await readFileAsTextAsync(file);
+        filesRead++;
+
+        // Once all files are read, log them
+        if (filesRead === 3) {
+
+            // Make sure our signature is 256 bytes
+            const pem = fileContents[0];
+            const serialFileContent = fileContents[1];
+            const signature = fileContents[2];
+
+            const serialNoPadding = serialFileContent.trimRight();
+            if (signature.length !== 256 || serialNoPadding.length !== 16) {
+                throw new Error('Signature or serial is invalid');
+            }
+            const serial = serialNoPadding.padStart(32, '0'); // Add our padding
+
+            const key = new JSEncrypt();
+            key.setPrivateKey(pem);
+            const bytes = new Uint8Array(256);
+            for (let i = 0; i < 256; i++) {
+                bytes[i] = Math.random() * 255;
+            }
+            const hashed = SHA256(bytes);
+            const signNonce = key.sign(hashed, SHA256, 'sha256');
+
+            if (signNonce === false) {
+                throw new Error('Bad Private Key');
+            }
+
+            // Private key worked!
+
+            // Translate these to BigInteger
+            const N = BigInt(String(key.key.n));
+            const E = BigInt(String(key.key.e));
+            const P = BigInt(String(key.key.p));
+            const Q = BigInt(String(key.key.q));
+
+            //As base64
+            //const serialBin = hexToBytes(serial);
+            //console.log('N:\n', mbedmpi2b64(int2mbedmpi(N)));
+            //console.log('E:\n', mbedmpi2b64(int2mbedmpi(E)));
+            //console.log('P:\n', mbedmpi2b64(int2mbedmpi(P)));
+            //console.log('Q:\n', mbedmpi2b64(int2mbedmpi(Q)));
+            //console.log('SERIAL:\n', btoa(String.fromCharCode(...new Uint8Array(serialBin))));
+            //console.log('SIGNATURE:\n', btoa(signature));
+
+            //As bytearray
+            //console.log('N:\n', base64ToByteArray(mbedmpi2b64(int2mbedmpi(N))));
+            //console.log('E:\n', base64ToByteArray(mbedmpi2b64(int2mbedmpi(E))));
+            //console.log('P:\n', base64ToByteArray(mbedmpi2b64(int2mbedmpi(P))));
+            //console.log('Q:\n', base64ToByteArray(mbedmpi2b64(int2mbedmpi(Q))));
+            //console.log('SERIAL:\n', hexToBytes(serial));
+            //console.log('SIGNATURE:\n', base64ToByteArray(btoa(signature)));
+
+            SerialBytes = hexToBytes(serial);
+            SignatureBytes = base64ToByteArray(btoa(signature));
+            NBytes = base64ToByteArray(mbedmpi2b64(int2mbedmpi(N)));
+            EBytes = base64ToByteArray(mbedmpi2b64(int2mbedmpi(E)));
+            PBytes = base64ToByteArray(mbedmpi2b64(int2mbedmpi(P)));
+            QBytes = base64ToByteArray(mbedmpi2b64(int2mbedmpi(Q)));
+        }
+    }
+}
+
+
+function updateGamepadUI(state) {
+    const digital = state.digital;
+    const analog = state.analog_buttons;
+    const precision = state.sticks_precision_bits;
+    const sticks = state.analog_sticks;
+
+    const btnElems = document.querySelectorAll('[data-btn]');
+
+    const btnKeys = ['A', 'B', 'C', 'D', 'START', 'SELECT', 'PEDAL', 'HOME', 'CAPTURE', 'D_EXT', 'HOME_EXT', 'CAPTURE_EXT', 'PAD_U', 'PAD_D', 'PAD_L', 'PAD_R', 'PAD_U_EXT', 'PAD_D_EXT', 'PAD_L_EXT', 'PAD_R_EXT'];
+    btnKeys.forEach(key => {
+        btnElems.forEach(button => {
+            if (button.dataset.btn == key) {
+                button.style.background = state[key] ? '#0f0' : '#555';
+            }
+        });
+    });
+
+    const powerElems = document.querySelectorAll('[data-power]');
+    const powerKeys = ['INT_PN', 'INT_P1', 'INT_P2', 'INT_P3', 'INT_P4', 'INT_P5', 'INT_PT'];
+    powerKeys.forEach(key => {
+        powerElems.forEach(button => {
+            if (button.dataset.power == key) {
+                button.style.background = state.power == key ? '#0f0' : '#555';
+            }
+        });
+    });
+
+    const brakeElems = document.querySelectorAll('[data-brake]');
+    const brakeKeys = ['INT_BR', 'INT_B1', 'INT_B2', 'INT_B3', 'INT_B4', 'INT_B5', 'INT_B6', 'INT_B7', 'INT_B8', 'INT_BU1', 'INT_BU2', 'INT_BU3', 'INT_BU4', 'INT_BU5', 'INT_BE', 'INT_BT'];
+    brakeKeys.forEach(key => {
+        brakeElems.forEach(button => {
+            if (button.dataset.brake == key) {
+                button.style.background = state.brake == key ? '#0f0' : '#555';
+            }
+        });
+    });
+}
+
+async function onInputReport(event) {
+    const { data, reportId } = event;
+    const view = new DataView(event.data.buffer);
+    const gamepadState = parseUsboutInputReport(view);
+    updateGamepadUI(gamepadState);
+}
+
+
+async function disconnect() {
+    if (device && device.opened) {
+        await device.close();
+        device.removeEventListener("inputreport", onInputReport);
+    }
+    document.getElementById("connect").style.display = "inline-block";
+    document.getElementById("connected_device").style.display = "none";
+    console.warn("Device disconnected:", device.productName);
+}
+
+async function getFirmwareInfo() {
+    const dataView = await device.receiveFeatureReport(WEB_ID_GET_FIRMWARE_INFO);
+
+    // Parse the returned DataView
+    const byteArray = new Uint8Array(dataView.buffer);
+    //console.log("Firmware Info:", byteArray);
+
+    const version = (byteArray[2] << 8) | byteArray[1];
+    const patch = version & 0x0F;
+    const minor = (version >> 4) & 0x3F;
+    const major = (version >> 10) & 0x3F;
+
+    const paragraph = document.getElementById('device_info');
+    paragraph.innerText = `Firmware version: ${major}.${minor}.${patch}`;
+    console.log(paragraph.innerText);
+
+    if (major == 0 && minor == 0 && patch == 1) {
+        console.log("Supported firmware.");
+    } else {
+        alert("Firmware version not supported");
+        throw new Error("Firmware version not supported");
+    }
+}
+
+async function getDefaultValues() {
+    const dataView = await device.receiveFeatureReport(WEB_ID_GET_DEFAULT_SET_APPLY);
+    const byteArray = new Uint8Array(dataView.buffer);
+    //console.log("getDefaultValues: ", byteArray);
+    config_data.forEach(c => {
+        c.default = byteArray[c.id];
+        if (c.data_type == Config_Data_Type.BOOL)
+            c.el_default.innerText = c.default ? "Enabled" : "Disabled";
+        else if (c.data_type == Config_Data_Type.MULTIPLE && c.enumRef)
+            c.el_default.innerText = Object.entries(c.enumRef).find(([k, v]) => v === c.default)?.[0];
+        else
+            c.el_default.innerText = c.default;
+
+        if (c.data_type == Config_Data_Type.MULTIPLE && c.enumRef && c.enumRef === Config_Data_Input_Mode) {
+            let counter = 0;
+            //default is the index of the enabled input modes
+            for (let i = 0; i < select.options.length; i++) {
+                const opt = select.options[i];
+                //console.log(i, opt.value, opt.text);
+                if (!opt.disabled) {
+                    ++counter;
+                    if (counter == c.default) {
+                        c.el_default.innerText = opt.textContent;
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function getCurrentValues() {
+    const dataView = await device.receiveFeatureReport(WEB_ID_GET_CURRENT_SET_SAVE);
+    const byteArray = new Uint8Array(dataView.buffer);
+    //console.log("getCurrentValues: ", byteArray);
+    config_data.forEach(c => {
+        c.initial = byteArray[c.id];
+        c.current = c.initial;
+        if (c.data_type == Config_Data_Type.BOOL)
+            c.el_config.checked = c.initial ? true : false;
+        else
+            c.el_config.value = c.initial;
+    });
+}
+
+navigator.hid.addEventListener("disconnect", async (event) => {
+    const d = event.device;
+    if (d == device) {
+        await disconnect();
+    }
+});
+
+document.getElementById('disconnect').addEventListener('click', async () => {
+    await disconnect();
+});
+
+
+document.getElementById('connect').addEventListener('click', async () => {
+    try {
+        const filters = [{
+            vendorId:  0x1209,
+            productId: 0x595A,
+            usagePage: 0xFF00,
+            usage:     0x0142
+        }];
+
+        const devices = await navigator.hid.requestDevice({
+            filters
+        });
+        if (devices.length === 0) {
+            console.log("No device selected.");
+            return;
+        }
+
+        device = devices[0];
+        await device.open();
+        console.log("Device opened:", device.productName);
+
+        await getFirmwareInfo();
+        await getDefaultValues();
+        await getCurrentValues();
+
+        document.getElementById("connect").style.display = "none";
+        document.getElementById("connected_device").style.display = "block";
+
+    } catch (err) {
+        console.error("Connection error:", err);
+        document.getElementById("connected_device").style.display = "none";
+        return;
+    }
+
+    device.addEventListener("inputreport", onInputReport);
+});
+
+async function SendData(reportId, sig_type, thebytes) {
+    var parts = thebytes.length / 32;
+    if (parts < 1)
+        parts = 1;
+    var part_size = thebytes.length / parts;
+    //console.log(`thebytes.length=${thebytes.length}, parts=${parts}, part_size=${part_size}`);
+
+    const data = new Uint8Array(34); // 34-byte payload
+    data[0] = sig_type; //signature
+    //data[1] = 0;//part
+
+    let index = 0;
+    for (let part = 0; part < parts; part++) {
+        data[1] = part;
+        for (let i = 0; i < part_size; i++) {
+            data[i + 2] = thebytes[index]; //i + 1;
+            ++index;
+        }
+        await device.sendFeatureReport(reportId, data);
+    }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+document.getElementById('send_bootsel').addEventListener('click', async () => {
+    if (!device) { // !device.opened
+        alert("Device not connected.");
+        return;
+    }
+    try {
+        await device.sendFeatureReport(WEB_ID_SET_BOOTSEL, new Uint8Array([0]));
+        console.log("sent");
+    } catch (e) {
+        console.warn(e);
+    }
+});
+
+
+
+document.getElementById('save_config').addEventListener('click', async () => {
+    if (!device) { // !device.opened
+        alert("Device not connected.");
+        return;
+    }
+
+    let has_changes = false;
+    config_data.forEach(c => {
+        c.current = (c.data_type == Config_Data_Type.BOOL) ? c.el_config.checked : c.el_config.value;
+        if (c.current != c.initial)
+            has_changes = true;
+        //update initial value
+        c.initial = c.current;
+        //console.log(`${c.key} current=${c.current}, initial=${c.initial}, eguals ${c.current != c.initial}`);
+    });
+
+    has_changes = true;
+
+    /*if (!has_changes) {
+        alert("No changes!");
+        return;
+    }*/
+
+    if (has_changes) {
+        try {
+            // Extract the values
+            const values = config_data.map(c => c.current);
+            var data = new Uint8Array(values);
+            await device.sendFeatureReport(WEB_ID_GET_CURRENT_SET_SAVE, data);
+            console.log("Config sent");
+            alert("Saved!\nDevice will restart now.");
+        } catch (e) {
+            console.warn(e);
+            alert("Error while saving!");
+        }
+    }
+});
+
+document.getElementById('send').addEventListener('click', async () => {
+    if (!device) { // !device.opened
+        alert("Device not connected.");
+        return;
+    }
+
+    try {
+        await readAllFiles();
+    } catch (e) {
+        alert(e);
+        return;
+    }
+    const btnsend = document.getElementById('send');
+    btnsend.disabled = true;
+    btnsend.innerText = "Uploading...";
+
+    try {
+        const enablekeys = 1; //checkbox.checked ? 1 : 0;
+        await SendData(WEB_ID_GET_SET_KEYS, 0, new Uint8Array([]));
+        await sleep(250);
+        await SendData(WEB_ID_GET_SET_KEYS, 1, SerialBytes);
+        await sleep(250);
+        await SendData(WEB_ID_GET_SET_KEYS, 2, SignatureBytes);
+        await sleep(250);
+        await SendData(WEB_ID_GET_SET_KEYS, 3, NBytes);
+        await sleep(250);
+        await SendData(WEB_ID_GET_SET_KEYS, 4, EBytes);
+        await sleep(250);
+        await SendData(WEB_ID_GET_SET_KEYS, 5, PBytes);
+        await sleep(250);
+        await SendData(WEB_ID_GET_SET_KEYS, 6, QBytes);
+        await sleep(250);
+        await SendData(WEB_ID_GET_SET_KEYS, 7, new Uint8Array([enablekeys]));
+        await sleep(250);
+
+        console.log("Waiting for devide to save...\n");
+        const t0 = Date.now();
+        while (true) {
+            const data_with_report_id = await device.receiveFeatureReport(WEB_ID_GET_SET_KEYS); // get_signing_state
+            if (data_with_report_id.getUint8(1) == 2) {
+                console.log("Done!.\n");
+                alert("Done!");
+                break;
+            }
+            if (Date.now() - t0 > 5000) {
+                console.log("Timeout waiting.\n");
+                break;
+            }
+            await sleep(100);
+        }
+    } catch (e) {
+        alert(e);
+    }
+    btnsend.disabled = false;
+    btnsend.innerText = "Upload";
+});
+</script>
+
+</html>
